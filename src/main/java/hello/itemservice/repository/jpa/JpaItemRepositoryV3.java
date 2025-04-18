@@ -1,6 +1,7 @@
 package hello.itemservice.repository.jpa;
 
 import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import hello.itemservice.domain.Item;
 import hello.itemservice.domain.QItem;
@@ -14,6 +15,8 @@ import org.springframework.util.StringUtils;
 import javax.persistence.EntityManager;
 import java.util.List;
 import java.util.Optional;
+
+import static hello.itemservice.domain.QItem.*;
 
 @Repository
 @Transactional
@@ -47,12 +50,11 @@ public class JpaItemRepositoryV3 implements ItemRepository {
         return Optional.ofNullable(item);
     }
 
-    @Override
-    public List<Item> findAll(ItemSearchCond itemSearch) {
+    public List<Item> findAllOld(ItemSearchCond itemSearch) {
         String itemName = itemSearch.getItemName();
         Integer maxPrice = itemSearch.getMaxPrice();
 
-        QItem qItem = QItem.item;
+        QItem qItem = item;
         BooleanBuilder builder = new BooleanBuilder();
         if(StringUtils.hasText(itemName)){
             builder.and(qItem.itemName.like("%"+itemName+"%"));
@@ -62,6 +64,29 @@ public class JpaItemRepositoryV3 implements ItemRepository {
         }
 
         return query.select(qItem).from(qItem).where(builder).fetch();
+    }
 
+    @Override
+    public List<Item> findAll(ItemSearchCond cond) {
+        String itemName = cond.getItemName();
+        Integer maxPrice = cond.getMaxPrice();
+
+        return query.select(item).from(item).where(likeItemName(itemName), maxPrice(maxPrice)).fetch();
+
+
+    }
+
+    private BooleanExpression likeItemName(String itemName) {
+        if(StringUtils.hasText(itemName)){
+            return item.itemName.like("%" + itemName + "%");
+        }
+        return null;
+    }
+
+    private BooleanExpression maxPrice(Integer maxPrice) {
+        if(maxPrice != null){
+            return item.price.loe(maxPrice);
+        }
+        return null;
     }
 }
